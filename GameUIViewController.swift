@@ -19,6 +19,13 @@ class GameUIViewController: UIViewController {
     var gravity: UIGravityBehavior!
     var gemBehavior: UIDynamicItemBehavior!
     
+    @IBOutlet var glowImageView: UIImageView!
+    @IBOutlet var secondGlowImageView: UIImageView!
+    
+    @IBOutlet var collectionSummaryView: UIView!
+    @IBOutlet var collectionSummaryTopConstraint: NSLayoutConstraint!
+    @IBOutlet var shadowView: UIView!
+    
     // Testing Elements
     @IBOutlet var numberOfGemsSlider: UISlider!
     @IBOutlet var numberOfGemsLabel: UILabel!
@@ -44,12 +51,20 @@ class GameUIViewController: UIViewController {
         equipmentButton.layer.shadowOffset = CGSize(width: 0, height: 2)
         equipmentButton.layer.shadowRadius = 2
         
+        collectionSummaryView.layer.cornerRadius = 5
+        collectionSummaryView.layer.shadowOpacity = 1
+        collectionSummaryView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        collectionSummaryView.layer.shadowRadius = 4
+        collectionSummaryView.addSubview(shadowView)
+        collectionSummaryTopConstraint.constant = 0 - collectionSummaryView.frame.height * 2
+        
         self.animator = UIDynamicAnimator(referenceView: self.view)
         
         gravity = UIGravityBehavior()
         gravity.gravityDirection = CGVector(dx: 0, dy: 1)
         gravity.action = { [unowned self] in
             let itemsToRemove = self.gravity.items.filter() { !CGRectIntersectsRect(self.view.bounds, $0.frame) }
+//            println("Gravity items to remove: \(itemsToRemove.count)")
             for item in itemsToRemove {
                 self.gravity.removeItem(item as! UIDynamicItem)
                 item.removeFromSuperview()
@@ -62,14 +77,18 @@ class GameUIViewController: UIViewController {
         gemBehavior.density = 10
         gemBehavior.action = { [unowned self] in
             let itemsToRemove = self.gemBehavior.items.filter() { !CGRectIntersectsRect(self.view.bounds, $0.frame) }
+//            println("Gem behavioritems to remove: \(itemsToRemove.count)")
+//            println()
             for item in itemsToRemove {
                 self.gemBehavior.removeItem(item as! UIDynamicItem)
                 item.removeFromSuperview()
             }
         }
         animator.addBehavior(gemBehavior)
-        
-        
+    }
+    
+    override func viewWillAppear(animated: Bool) {
+//        dismissCollectionSummary()
     }
     
     override func viewDidAppear(animated: Bool) {
@@ -77,7 +96,7 @@ class GameUIViewController: UIViewController {
         UIView.animateWithDuration(0.4, animations: { () -> Void in
             self.view.alpha = 1
             }, completion: { (completed) -> Void in
-                //
+                self.startGlowEffect()
         })
     }
 
@@ -102,6 +121,9 @@ class GameUIViewController: UIViewController {
         case 1:
             println("Collect Button Pressed")
             spewGems(Double(numberOfGemsSlider.value))
+            stopGlowEffect()
+//            self.collectButton.enabled = false
+            showCollectionSummary()
             
             // Shop Button
         case 2:
@@ -118,6 +140,16 @@ class GameUIViewController: UIViewController {
     
     @IBAction func buttonTouchEnded(sender: UIButton) {
         sender.transform = CGAffineTransformMakeScale(1, 1)
+    }
+    
+    override func touchesBegan(touches: Set<NSObject>, withEvent event: UIEvent) {
+        var touch = touches.first as! UITouch
+        var point = touch.locationInView(self.view)
+        
+        if !collectionSummaryView.frame.contains(point) {
+            dismissCollectionSummary()
+            startGlowEffect()
+        }
     }
     
     func collectScaleAnimation() {
@@ -170,7 +202,8 @@ class GameUIViewController: UIViewController {
             for gem in gems {
                 gem.alpha = 0
             }
-        })
+        }) { (completed) -> Void in
+        }
     }
     
     func randomDouble(lower: Double, upper: Double) -> Double {
@@ -189,6 +222,79 @@ class GameUIViewController: UIViewController {
         else {
            temporaryView.hidden = false
         }
+    }
+    
+    func startGlowEffect() {
+//        self.glowImageView.alpha = 1
+//        self.secondGlowImageView.alpha = 1
+        glowEffect1()
+        glowEffect2()
+    }
+    
+    func glowEffect1() {
+//        self.glowImageView.alpha = 1
+        self.glowImageView.hidden = false
+        
+        UIView.animateWithDuration(0.5, delay: 0, options: .CurveEaseIn | .Repeat | .Autoreverse, animations: { () -> Void in
+            self.glowImageView.transform = CGAffineTransformMakeScale(1.5, 1.5)
+            self.glowImageView.alpha = 0.5
+            }) { (completed) -> Void in
+                //
+        }
+    }
+    
+    func glowEffect2() {
+//        self.secondGlowImageView.alpha = 1
+        self.secondGlowImageView.hidden = false
+        
+        self.secondGlowImageView.transform = CGAffineTransformMakeScale(1.4, 1.4)
+        UIView.animateWithDuration(2, delay: 0, options: .Repeat | .CurveLinear | .Autoreverse, animations: { () -> Void in
+            self.secondGlowImageView.transform = CGAffineTransformRotate(self.secondGlowImageView.transform, CGFloat(M_PI))
+            self.secondGlowImageView.alpha = 0.5
+            }) { (completed) -> Void in
+                //
+        }
+    }
+    
+    func stopGlowEffect() {
+        self.glowImageView.layer.removeAllAnimations()
+        self.secondGlowImageView.layer.removeAllAnimations()
+        
+        UIView.animateWithDuration(0.5, animations: { () -> Void in
+            self.glowImageView.alpha = 0
+            self.secondGlowImageView.alpha = 0
+            
+        }) { (completed) -> Void in
+            self.glowImageView.hidden = true
+            self.secondGlowImageView.hidden = true
+//            self.glowImageView.removeFromSuperview()
+//            self.secondGlowImageView.removeFromSuperview()
+        }
+    }
+    
+    func showCollectionSummary() {
+        collectionSummaryTopConstraint.constant = 0 - collectionSummaryView.frame.height * 2
+        self.view.layoutIfNeeded()
+        collectionSummaryTopConstraint.constant = 125
+        
+        shadowView.alpha = 0
+        UIView.animateWithDuration(1, delay: 0, usingSpringWithDamping: 1, initialSpringVelocity: 0, options: .CurveEaseOut, animations: { () -> Void in
+            self.view.layoutIfNeeded()
+            self.shadowView.alpha = 0.4
+            }) { (completed) -> Void in
+                //
+        }
+    }
+    
+    func dismissCollectionSummary() {
+        collectionSummaryTopConstraint.constant = 0 - collectionSummaryView.frame.height * 2
+        UIView.animateWithDuration(1, delay: 0, usingSpringWithDamping: 1, initialSpringVelocity: 0, options: .CurveEaseInOut, animations: { () -> Void in
+            self.view.layoutIfNeeded()
+            self.shadowView.alpha = 0
+            }) { (completed) -> Void in
+                //
+        }
+        
     }
     
 }

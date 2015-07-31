@@ -40,7 +40,7 @@ class LoadingScreenViewController: UIViewController {
     }
     
     func update(timer: NSTimer) {
-        loaderView.progress += 0.05
+        loaderView.progress += 0.1
         
         UIView.animateWithDuration(0.6, delay: 0, options: .Repeat | .Autoreverse, animations: { () -> Void in
             self.loadingDiamond.transform = CGAffineTransformMakeScale(0.5, 0.5)
